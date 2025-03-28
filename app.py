@@ -55,8 +55,7 @@ def check_password():
     </style>
     """, unsafe_allow_html=True)
     
-    # UPDATED: Changed title to reflect Alex's focus
-    st.title("Alex's Meeting Assistant")
+    st.title("Rev Research")
     st.write("Please enter the password to access the application.")
     
     st.text_input("Password", type="password", on_change=password_entered, key="password")
@@ -92,28 +91,22 @@ class EnhancedTranscriptAnalyzer:
         self.temperature = 0.1
         self.max_tokens = 8000
         
-        # UPDATED: System message tailored to Alex's context - made more exploratory for projects
+        # System message for enhanced reasoning
         self.system_message = """
-You are Alex's Meeting Assistant, an expert transcript analyst that helps Alex Skurikhin search through his work meeting transcripts. Today is March 27, 2025, and the transcripts cover August 2024 to January 2025.
-
-ABOUT ALEX:
-Alex Skurikhin is the Software Architect/Director of Software Development at Rev.com. He's the co-founder and technical leader of the AI team, responsible for architecture, infrastructure, and development processes. His work involves various technical projects in AI, speech recognition, and API development that will be evident in the transcript content.
+You are Rev Insights, an expert transcript analyst. Answer questions about business meeting transcripts directly and naturally. Today is March 23, 2025.
 
 Focus on:
 - Providing clear, direct answers based only on transcript evidence
-- Discovering and tracking projects mentioned in the transcripts
-- Tracking progress, decisions, commitments, and action items
-- Including dates for all information, especially for action items (since some may no longer be relevant)
-- Identifying who's working on what based only on what's mentioned in the transcripts
-- Organizing information chronologically to show how projects evolved
-- Highlighting technical details and architecture decisions
+- Including relevant people, projects, dates, and technical details when mentioned
+- Using bullet points for lists when appropriate
+- Organizing information chronologically when dates are available
 
-Write in a technical yet conversational style appropriate for a software architect. Use technical terminology where relevant.
+Write in a natural, conversational style. Avoid creating arbitrary section headers or empty template sections in your answer.
 """
         
-        # UPDATED: Reasoning template made more exploratory for discovering projects
+        # Reasoning template for synthesizing answers
         self.reasoning_template = """
-You are an expert transcript analyst working specifically with Alex Skurikhin's meeting transcripts from Rev.com. Alex is the Software Architect/Director of Software Development and technical leader of the AI team.
+You are an expert transcript analyst working with rev.com meeting transcripts, podcast interviews, and political speeches.
 
 ORIGINAL QUESTION: {question}
 
@@ -124,35 +117,30 @@ RETRIEVED TRANSCRIPT CHUNKS:
 {chunks}
 
 ANALYSIS CONTEXT:
-- These transcripts are from Alex's meetings between August 2024 and January 2025
-- Today is March 27, 2025, so some action items or plans may have already occurred
-- Alex works on various technical projects that should be identified from the transcript content
-- Projects mentioned may include both established initiatives and newly launched efforts
 - Information is often scattered across multiple meetings on different dates
-- Project statuses and technical decisions evolve over time
-- Alex often discusses architecture, infrastructure, and development processes
-- Team members' responsibilities and project assignments may change across meetings
-- Technical terminology related to speech recognition, APIs, microservices, and ML/AI concepts are frequently used
+- Speakers may reference projects or ideas inconsistently
+- The most recent transcripts generally contain the most up-to-date information
+- Discussions may be cut off mid-sentence or continue in later chunks
+- Project statuses and plans evolve over time
 
 RESPONSE GUIDELINES:
 - Focus ONLY on directly answering the original question
-- Always include dates for when information was mentioned in meetings
-- Clearly distinguish between plans, decisions, and completed actions
-- For action items or future plans mentioned in older transcripts, note that they may have already occurred
-- Prioritize technical details and architectural decisions when relevant to the question
-- Identify team members involved in projects when mentioned
+- Include ONLY information that directly addresses what was asked
+- Avoid including tangential information about key people, timelines, or projects unless specifically requested
+- Prioritize relevant evidence over comprehensive coverage
+- Do not create sections or categories that weren't explicitly asked for
 - Do NOT list sources at the end of your response
 
 FORMATTING REQUIREMENTS:
 - Use bullet points with the '•' character (not dashes or numbers) for lists
 - Put each bullet point on its own line
 - Include a blank line before and after each list
-- Use **bold text** only for project names, key technical terms, or important decisions
-- Include dates in parentheses when referencing information from specific meetings
+- Use **bold text** ONLY for section headings or when directly quoting a term from the transcript that represents a branded feature, product name, or official program
+- Do NOT bold common terms, descriptive phrases, or general concepts
 - Include blank lines between paragraphs
 - Keep formatting simple and consistent
 
-Using the transcript chunks above, analyze the information and synthesize a focused answer that directly addresses the original question. Keep your response tightly scoped to exactly what was asked.
+Using the transcript chunks above, analyze the information and synthesize a focused answer that directly addresses the original question. Keep your response tightly scoped to exactly what was asked, not what might be interesting or related.
 
 Final Answer:
 """
@@ -163,86 +151,76 @@ Final Answer:
         """
         # No status text updates
         
-        # UPDATED: Create prompt for query decomposition with Alex-specific context
+        # Create prompt for query decomposition
         decomposition_prompt = """
-You are a specialized assistant that prepares queries for searching through Alex Skurikhin's meeting transcripts at Rev.com. Alex is the Software Architect/Director of Software Development and technical leader of the AI team.
+You are a specialized assistant that prepares queries for searching through a large corpus of transcripts.
+The transcripts include business meetings from the transcription company rev.com.
 
-Your job is to decompose complex queries into multiple simpler queries that can be answered independently, then combined for a complete answer.
+Sometimes, user queries are complex and need to be broken down for better search results.
+Your job is to decompose complex queries into multiple simpler queries that can be answered
+independently, then combined for a complete answer.
 
 IMPORTANT CONTEXT:
-1. The search system contains transcripts from Alex Skurikhin's meetings at Rev.com from August 2024 to January 2025
-2. Each searchable chunk is approximately 300 words from a single speaker with the date prepended
-3. Alex leads engineering teams developing AI and speech technologies at Rev.com
-   - His specific projects and initiatives should be identified from the transcripts
-   - He likely works on various speech recognition, API, and AI-related projects
-4. Meetings typically involve product management, engineering teams, and leadership
-5. Technical discussions often include architecture, infrastructure, and development processes
-6. Information about a single topic is often fragmented across multiple chunks and multiple meetings
-7. Project names and technical terms may appear in different forms or abbreviations
-8. People's names may appear in different forms (e.g., first name only, full name)
+1. The search system contains transcripts from business meetings from the transcription and automatic speech recognition company, Rev.com
+2. Each searchable chunk is approximately 300 words from a single speaker with the date prepended.
+3. Information about a single topic is often fragmented across multiple chunks and multiple meetings.
+4. People's names may appear in different forms (e.g., "Alex", "Alexander", "Alex Smith", etc.).
+5. Projects and topics may be referred to by different terms or descriptions across meetings.
+6. Discussions about a person's work might not explicitly mention the person in every relevant chunk.
 
 Your job is to decompose complex queries into multiple specific queries that will effectively:
-- Cast a wide enough net to capture relevant information across Alex's meetings
-- Account for variations in technical terminology and project references
+- Cast a wide enough net to capture relevant information
+- Account for variations in terminology and references
 - Capture content across different time periods when appropriate
-- Consider both explicit and implicit references to projects and team members
+- Consider both explicit and implicit references to topics and people
 - You should never exceed 5 total decompose queries
 
 DECOMPOSITION STRATEGIES:
 
+FOR PERSON-FOCUSED QUERIES:
+- Include name variations (formal/informal)
+- Create separate queries for different aspects (projects, roles, opinions)
+- For timeline questions, create date-specific variations
+- Include queries that capture discussions where the person is mentioned indirectly
+
 FOR PROJECT-FOCUSED QUERIES:
-- Use project terminology exactly as mentioned in the question
-- Create broader queries that can discover relevant project information regardless of project name
-- Create separate queries for architecture, implementation, challenges, and progress
-- Include queries about team members in relation to projects
-- Consider technical components or features that might be related
-- Add time-specific variations when appropriate (recent progress, initial design, etc.)
+- Include different terms used to describe the project
+- Create separate queries for project phases, challenges, and outcomes
+- Include queries about people associated with the project
+- Consider timeline-specific variations if appropriate
 
-FOR TECHNICAL DECISION QUERIES:
-- Include different technical approaches or alternatives discussed
-- Create queries for decision criteria, trade-offs, and outcomes
-- Include technical terminology variations
-
-FOR TEAM-RELATED QUERIES:
-- Include queries about roles, responsibilities, and assignments
-- Create variations with different team member name formats
-- Include queries about team structure and collaboration
-
-FOR ACTION ITEM QUERIES:
-- Create queries that capture commitments, next steps, and assigned tasks
-- Include time references (deadline, timeline, next meeting)
-- Add queries with key action verbs (implement, research, design, test)
+FOR TIME-BOUNDED QUERIES:
+- Create month-specific variations when appropriate
+- Include queries that capture references to specific time periods
+- Consider seasonal references (Q1, Q2, summer launch, etc.)
 
 EXAMPLES:
 
-Technical Project Query:
-User: "What's the latest on the ASR service implementation?"
+Simple Factual Query:
+User: "When was the product launch meeting?"
 Decomposed Queries: [
-  "ASR service implementation progress",
-  "speech recognition service updates",
-  "automatic speech recognition development status",
-  "Alex speech recognition architecture",
-  "ASR project timeline recent"
+  "product launch meeting date",
+  "when product launch occurred"
 ]
 
-Team Assignment Query:
-User: "Who's working on the RAG system?"
+Person-Focused Query:
+User: "What projects has Alex been working on for the past 6 months?"
 Decomposed Queries: [
-  "RAG system team members",
-  "Retrieval-Augmented Generation assignments",
-  "who responsible for RAG development",
-  "RAG system engineering team",
-  "RAG project roles"
+  "Alex projects last 6 months",
+  "Alexander projects recent",
+  "Alex working on since October",
+  "Alex responsibilities recent months",
+  "Alex mentioned project work"
 ]
 
-Decision Query:
-User: "What was decided about the API rate limiting?"
+Project-Focused Query:
+User: "What are the main challenges with the ASR technology implementation?"
 Decomposed Queries: [
-  "API rate limiting decision",
-  "RESTful API throttling approach",
-  "rate limit implementation plan",
-  "API request limits agreed",
-  "decision on API quotas"
+  "ASR technology challenges",
+  "automatic speech recognition problems",
+  "ASR implementation issues",
+  "speech recognition accuracy concerns",
+  "ASR technical limitations"
 ]
 
 IMPORTANT OUTPUT INSTRUCTIONS:
@@ -714,8 +692,7 @@ DECOMPOSED QUERIES (JSON ARRAY ONLY):
 
 # -------------------- Streamlit UI Code --------------------
 st.set_page_config(
-    # UPDATED: Changed page title
-    page_title="Alex's Meeting Assistant",
+    page_title="Rev Research",
     page_icon="🔍",
     layout="wide"
 )
@@ -1122,7 +1099,6 @@ if 'agent' not in st.session_state:
         st.error(f"Missing environment variables: {', '.join(missing_vars)}")
         st.stop()
     # Use the environment variable for index_name if available
-    # UPDATED: Changed default index name
     index_name = os.environ.get("COMPASS_INDEX_NAME", "compass-alex12")
     st.session_state.agent = EnhancedTranscriptAnalyzer(
         compass_url=os.environ["COMPASS_URL"],
@@ -1148,7 +1124,6 @@ with st.sidebar:
     
     st.subheader("Actions")
     if st.button("Reset Agent", key="reset_agent", use_container_width=True):
-        # UPDATED: Changed default index name
         index_name = os.environ.get("COMPASS_INDEX_NAME", "compass-alex12")
         st.session_state.agent = EnhancedTranscriptAnalyzer(
             compass_url=os.environ["COMPASS_URL"],
@@ -1161,23 +1136,21 @@ with st.sidebar:
 # --- MAIN CONTENT ---
 # Header section with gradient background
 st.markdown('<div class="app-header">', unsafe_allow_html=True)
-# UPDATED: Changed header title and subtitle
-st.markdown('<h1>Alex\'s Meeting Assistant</h1>', unsafe_allow_html=True)
-st.markdown('<div class="app-subtitle">Search Alex Skurikhin\'s meeting transcripts with AI-powered insights</div>', unsafe_allow_html=True)
+st.markdown('<h1>Rev Research</h1>', unsafe_allow_html=True)
+st.markdown('<div class="app-subtitle">Search meeting transcripts with AI-powered insights</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
 if 'results' not in st.session_state:
     st.session_state.results = []
 
-# UPDATED: Changed example questions to be Alex-specific
 example_questions = [
-    "What's the current status of the RAG system development?",
-    "Who is working on the Real-Time ASR Service?",
-    "What architectural decisions were made for the API Server?",
-    "What are the main challenges with the Speech-To-Text microservices?",
-    "What action items did Alex assign in the last meeting about the Rev.ai API?",
-    "How is the team addressing scaling issues with the ASR infrastructure?",
-    "What progress has been made on improving the speech recognition accuracy?"
+    "What projects has Alex been working on?",
+    "What is Ryan Schumacher's favorite color?",
+    "What is the subscription management platform used by Rev?",
+    "How does Rev's customer-centric approach influence its product roadmap?",
+    "How does Rev gather and utilize customer feedback to shape its products and services?",
+    "What are the benefits of Rev's autonomous pod structure for team dynamics and innovation?",
+    "What security measures has Rev implemented to address the concerns of law firms, and who is leading these efforts?"
 ]
 
 tab1, tab2 = st.tabs(["Ask a Question", "Example Questions"])
@@ -1188,7 +1161,7 @@ with tab1:
         query = st.session_state.rerun_query
         del st.session_state.rerun_query
     else:
-        query = st.text_area("Enter your question about Alex's meeting transcripts:", height=80)
+        query = st.text_area("Enter your question about the transcripts:", height=80)
     
     col1, col2 = st.columns([1, 5])
     with col1:
@@ -1295,8 +1268,7 @@ if submit_button and query.strip():
             st.markdown("</div>", unsafe_allow_html=True)
 elif not st.session_state.results:
     # Add subtle info message
-    # UPDATED: Changed welcome message
-    st.info("👆 Enter a question about Alex's meeting transcripts to get started!")
+    st.info("👆 Enter a question about the meeting transcripts to get started!")
 
 # Footer section
 st.markdown('<div class="footer">', unsafe_allow_html=True)
