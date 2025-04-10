@@ -72,7 +72,7 @@ class EnhancedTranscriptAnalyzer:
     Enhanced transcript analyzer that uses query decomposition and reasoning synthesis
     to generate more comprehensive answers from transcript chunks.
     """
-    def __init__(self, compass_url, compass_token, cohere_api_key, index_name="compass-revdate"):
+    def __init__(self, compass_url, compass_token, cohere_api_key, index_name="rev-final"):
         self.index_name = index_name
         self.name = "enhanced_transcript_analyzer"
         
@@ -90,14 +90,6 @@ class EnhancedTranscriptAnalyzer:
         self.per_query_limit = 5  # Reduced from 7 to 5 to minimize timeout risk
         self.temperature = 0.1
         self.max_tokens = 8000
-        
-        # Add token pricing constants
-        self.INPUT_TOKEN_PRICE_PER_MILLION = 2.50  # $2.50 per 1M input tokens
-        self.OUTPUT_TOKEN_PRICE_PER_MILLION = 10.0  # $10.00 per 1M output tokens
-        
-        # Add token tracking attributes
-        self.total_input_tokens = 0
-        self.total_output_tokens = 0
         
         # System message for enhanced reasoning
         self.system_message = """
@@ -152,21 +144,6 @@ Using the transcript chunks above, analyze the information and synthesize a focu
 
 Final Answer:
 """
-
-    # New method to calculate costs
-    def calculate_token_cost(self, input_tokens, output_tokens):
-        """Calculate the cost of token usage."""
-        input_cost = (input_tokens / 1000000) * self.INPUT_TOKEN_PRICE_PER_MILLION
-        output_cost = (output_tokens / 1000000) * self.OUTPUT_TOKEN_PRICE_PER_MILLION
-        total_cost = input_cost + output_cost
-        
-        return {
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "input_cost": input_cost,
-            "output_cost": output_cost,
-            "total_cost": total_cost
-        }
 
     def decompose_query(self, query, status_text=None):
         """
@@ -268,15 +245,6 @@ DECOMPOSED QUERIES (JSON ARRAY ONLY):
                     {"role": "user", "content": decomposition_prompt.format(query=query)}
                 ]
             )
-            
-            # Track token usage for decomposition
-            if hasattr(response, 'meta') and hasattr(response.meta, 'usage'):
-                input_tokens = getattr(response.meta.usage, 'input_tokens', 0)
-                output_tokens = getattr(response.meta.usage, 'output_tokens', 0)
-                
-                # Add to our running total
-                self.total_input_tokens += input_tokens
-                self.total_output_tokens += output_tokens
             
             # Extract and parse the response (changed for v2)
             decomposition_text = response.message.content[0].text.strip()
@@ -418,15 +386,6 @@ DECOMPOSED QUERIES (JSON ARRAY ONLY):
                 ],
                 documents=documents  # Pass documents for RAG with citations
             )
-            
-            # Track token usage for synthesis
-            if hasattr(response, 'meta') and hasattr(response.meta, 'usage'):
-                input_tokens = getattr(response.meta.usage, 'input_tokens', 0)
-                output_tokens = getattr(response.meta.usage, 'output_tokens', 0)
-                
-                # Add to our running total
-                self.total_input_tokens += input_tokens
-                self.total_output_tokens += output_tokens
             
             # Extract the synthesized answer with safety checks (v2 format)
             if (hasattr(response, 'message') and 
@@ -647,10 +606,6 @@ DECOMPOSED QUERIES (JSON ARRAY ONLY):
         """
         start_time = time.time()
         
-        # Reset token counters for this question
-        self.total_input_tokens = 0
-        self.total_output_tokens = 0
-        
         status_text = status_placeholder
         # Clear any status text immediately
         status_text.empty()
@@ -691,12 +646,6 @@ DECOMPOSED QUERIES (JSON ARRAY ONLY):
             # Calculate processing time
             total_time = time.time() - start_time
             
-            # Calculate token cost metrics (even if minimal for no results)
-            token_cost_metrics = self.calculate_token_cost(
-                self.total_input_tokens, 
-                self.total_output_tokens
-            )
-            
             # Prepare result for UI
             result = {
                 "query": query,
@@ -708,12 +657,7 @@ DECOMPOSED QUERIES (JSON ARRAY ONLY):
                 "metrics": {
                     "total_time": total_time,
                     "evidence_count": 0,
-                    "decomposed_queries": decomposed_queries,
-                    "input_tokens": self.total_input_tokens,
-                    "output_tokens": self.total_output_tokens,
-                    "input_cost": token_cost_metrics["input_cost"],
-                    "output_cost": token_cost_metrics["output_cost"],
-                    "total_cost": token_cost_metrics["total_cost"]
+                    "decomposed_queries": decomposed_queries
                 }
             }
             
@@ -727,14 +671,7 @@ DECOMPOSED QUERIES (JSON ARRAY ONLY):
         # Step 4: Format the answer as HTML with citations
         html_formatted_answer = self.format_response(synthesized_answer, citations)
         
-        # Calculate total processing time
         total_time = time.time() - start_time
-        
-        # Calculate token cost metrics
-        token_cost_metrics = self.calculate_token_cost(
-            self.total_input_tokens, 
-            self.total_output_tokens
-        )
         
         # Prepare result in the format expected by the UI
         result = {
@@ -747,12 +684,7 @@ DECOMPOSED QUERIES (JSON ARRAY ONLY):
             "metrics": {
                 "total_time": total_time,
                 "evidence_count": len(all_chunks),
-                "decomposed_queries": decomposed_queries,
-                "input_tokens": self.total_input_tokens,
-                "output_tokens": self.total_output_tokens,
-                "input_cost": token_cost_metrics["input_cost"],
-                "output_cost": token_cost_metrics["output_cost"],
-                "total_cost": token_cost_metrics["total_cost"]
+                "decomposed_queries": decomposed_queries
             }
         }
         
@@ -1143,27 +1075,6 @@ div.stButton > button {
     margin-top: 0 !important;
 }
 
-/* Cost breakdown table styling */
-.cost-breakdown-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 1rem 0;
-}
-
-.cost-breakdown-table td, .cost-breakdown-table th {
-    padding: 0.75rem;
-    border: 1px solid #e2e8f0;
-}
-
-.cost-breakdown-table tr:nth-child(even) {
-    background-color: #f8fafc;
-}
-
-.cost-breakdown-table tr:last-child {
-    font-weight: bold;
-    background-color: #EEF2FF;
-}
-
 @media (max-width: 768px) {
     .app-header {
         padding: 0.75rem;
@@ -1188,7 +1099,7 @@ if 'agent' not in st.session_state:
         st.error(f"Missing environment variables: {', '.join(missing_vars)}")
         st.stop()
     # Use the environment variable for index_name if available
-    index_name = os.environ.get("COMPASS_INDEX_NAME", "compass-revdate")
+    index_name = os.environ.get("COMPASS_INDEX_NAME", "rev-final")
     st.session_state.agent = EnhancedTranscriptAnalyzer(
         compass_url=os.environ["COMPASS_URL"],
         compass_token=os.environ["COMPASS_TOKEN"],
@@ -1213,7 +1124,7 @@ with st.sidebar:
     
     st.subheader("Actions")
     if st.button("Reset Agent", key="reset_agent", use_container_width=True):
-        index_name = os.environ.get("COMPASS_INDEX_NAME", "compass-revdate")
+        index_name = os.environ.get("COMPASS_INDEX_NAME", "rev-final")
         st.session_state.agent = EnhancedTranscriptAnalyzer(
             compass_url=os.environ["COMPASS_URL"],
             compass_token=os.environ["COMPASS_TOKEN"],
@@ -1300,7 +1211,7 @@ if submit_button and query.strip():
     # Display the final answer
     answer_placeholder.markdown(result["html_answer"], unsafe_allow_html=True)
     
-    # Display metrics with improved styling and token information
+    # Display metrics with improved styling
     answer_container.markdown(f"""
     <div class="metrics-container">
         <div class="metric-card">
@@ -1316,49 +1227,7 @@ if submit_button and query.strip():
             <div class="metric-label">Citations</div>
         </div>
     </div>
-    
-    <div class="metrics-container">
-        <div class="metric-card">
-            <div class="metric-value">{result['metrics']['input_tokens']:,}</div>
-            <div class="metric-label">Input Tokens</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-value">{result['metrics']['output_tokens']:,}</div>
-            <div class="metric-label">Output Tokens</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-value">${result['metrics']['total_cost']:.5f}</div>
-            <div class="metric-label">Total Cost</div>
-        </div>
-    </div>
     """, unsafe_allow_html=True)
-    
-    # Add a cost breakdown expander for detailed analysis
-    with answer_container.expander("Cost Breakdown", expanded=False):
-        st.markdown("<div style='background-color: white; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;'>", unsafe_allow_html=True)
-        
-        # Create a table showing detailed cost metrics
-        st.markdown("""
-        | Metric | Value | Rate | Cost |
-        | ------ | ----- | ---- | ---- |
-        | Input Tokens | {:,} | $2.50 per 1M | ${:.5f} |
-        | Output Tokens | {:,} | $10.00 per 1M | ${:.5f} |
-        | **Total** | **{:,}** | | **${:.5f}** |
-        """.format(
-            result['metrics']['input_tokens'], 
-            result['metrics']['input_cost'],
-            result['metrics']['output_tokens'], 
-            result['metrics']['output_cost'],
-            result['metrics']['input_tokens'] + result['metrics']['output_tokens'],
-            result['metrics']['total_cost']
-        ))
-        
-        # Add decomposed queries information which helps explain token usage
-        st.subheader("Decomposed Queries")
-        for idx, query in enumerate(result['metrics']['decomposed_queries']):
-            st.markdown(f"**Query {idx+1}:** {query}")
-            
-        st.markdown("</div>", unsafe_allow_html=True)
     
     # Show citation details if available with improved styling
     if result.get("citations"):
