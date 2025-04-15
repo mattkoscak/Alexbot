@@ -72,7 +72,7 @@ class EnhancedTranscriptAnalyzer:
     Enhanced transcript analyzer that uses query decomposition and reasoning synthesis
     to generate more comprehensive answers from transcript chunks.
     """
-    def __init__(self, compass_url, compass_token, cohere_api_key, index_name="rev-final"):
+    def __init__(self, compass_url, compass_token, cohere_api_key, index_name="rev-test"):
         self.index_name = index_name
         self.name = "enhanced_transcript_analyzer"
         
@@ -1099,7 +1099,7 @@ if 'agent' not in st.session_state:
         st.error(f"Missing environment variables: {', '.join(missing_vars)}")
         st.stop()
     # Use the environment variable for index_name if available
-    index_name = os.environ.get("COMPASS_INDEX_NAME", "rev-final")
+    index_name = os.environ.get("COMPASS_INDEX_NAME", "rev-test")
     st.session_state.agent = EnhancedTranscriptAnalyzer(
         compass_url=os.environ["COMPASS_URL"],
         compass_token=os.environ["COMPASS_TOKEN"],
@@ -1124,7 +1124,7 @@ with st.sidebar:
     
     st.subheader("Actions")
     if st.button("Reset Agent", key="reset_agent", use_container_width=True):
-        index_name = os.environ.get("COMPASS_INDEX_NAME", "rev-final")
+        index_name = os.environ.get("COMPASS_INDEX_NAME", "rev-test")
         st.session_state.agent = EnhancedTranscriptAnalyzer(
             compass_url=os.environ["COMPASS_URL"],
             compass_token=os.environ["COMPASS_TOKEN"],
